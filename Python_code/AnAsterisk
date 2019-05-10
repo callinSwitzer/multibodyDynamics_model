@@ -1,0 +1,6 @@
+While I understand it is generally bad practice to use global variables, I am new to Python, 
+and I aim to finish my degree before August of 2020. 
+I have neither the time nor the patience to learn how to pack the desired parameters at the appropriate times 
+and pass them to the other script. 
+
+If I ever learn how to do so without global parameters, I will upload any changes as appropriate.
