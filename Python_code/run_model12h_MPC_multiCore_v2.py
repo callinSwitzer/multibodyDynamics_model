@@ -71,7 +71,7 @@ import multiprocessing
 #from multiprocessing import Pool, cpu_count
 import importlib
 import functools
-import multibodyDynamics_12h #Note: that this is a custom-written file which
+import multibodyDynamics_12h_v2 #Note: that this is a custom-written file which
                #contains the ODEs to run the code.
 from collections import OrderedDict
 
@@ -93,7 +93,7 @@ from matplotlib import pyplot as plt #UNMUTE THIS WHEN TROUBLESHOOTING
 # %% Variables to alter (if someone else is making changes for me)
 #Note: all numerical values MUST be integers
 
-numOfTrajectories = int(2500) #Number of trajectories per half wing stroke spray
+numOfTrajectories = int(100) #Number of trajectories per half wing stroke spray
 shift = int(0) #This is to increase the file number as appropriate
 FullRuns = int(1) #Number of full runs (MUST be >= 1)
 treatment = 'fa' #Fully-actuated (fa), Under-actuated (ua), 
@@ -108,16 +108,11 @@ LengthExtend = 0 #This will lengthen the difference between the two masses.
 
 L1 = LengthScaleFactor*0.908 #Length from the thorax-abdomen joint to 
     #the center of the head-thorax mass in cm.
-    
-if treatment == 'us':
-    #If we do not want the L3 off the m1 center of mass:
-    L3 = LengthScaleFactor*0.75 #Length from the thorax-abdomen joint to the 
-                #aerodynamic force vector in cm    
-else:
-    #If we DO want L3 aligned with the center of mass (a.k.a. for 'ua' and 'fa'):
-    L3 = L1 #Length from the thorax-abdomen joint to the aerodynamic force 
-                #vector in cm
-
+L3 = LengthScaleFactor*0.75 #Length from the thorax-abdomen joint to the 
+    #aerodynamic force vector in cm
+# #If we do not want the L3 off the m1 center of mass:
+# L3 = L1; #Length from the thorax-abdomen joint to the 
+#     #aerodynamic force vector in cm
 ahead = LengthScaleFactor*0.908 #Major axis of the head-thorax ellipsoid
     #in cm.
 abutt = LengthScaleFactor*1.7475 #Major axis of the abdomen ellipsoid
@@ -176,7 +171,7 @@ else:
 print(suffix)
 
 # %% More variables NOT to alter
-halfwingStrokes = int(501) #Originally 500, but we need an extra half wing
+halfwingStrokes = int(3) #Originally 500, but we need an extra half wing
     #stroke for the formal MPC.
 hwbf = int(50) #wing beat frequency of the insect in Hz
 timestep = int(100) #The number of timesteps we will use when interpolating
@@ -204,7 +199,8 @@ print('Number of max workers is: ', MaxWorkers)
 
 # %% Time vector
 Tstore = np.linspace(0,((1/hwbf)*halfwingStrokes),(timestep*halfwingStrokes)).T
-#savemat('Tstore_MPC_hws_sp.mat', {'Tstore': Tstore}) #UNMUTE WHEN YOU WANT TO SAVE THE DATA
+# save('12h-AMSumOfPrimes_MPC/Tstore_MPC_hws_sp.mat','Tstore')
+#savemat('Tstore_MPC_hws_sp.mat', {'Tstore': Tstore})
 
 # %% Relevant to cost function
 #Goal criteria
@@ -318,7 +314,6 @@ pre_Winstore = ([None]*numOfPartialPaths)
 # %% Generating the simulations
 
 tstamp_beginLoop = datetime.now()
-print("Begin generating simulations loop")
 
 #Start the "full run" loop (a.k.a. a virtual moth)
 for nn in np.arange(1,FullRuns+1):
@@ -347,14 +342,9 @@ for nn in np.arange(1,FullRuns+1):
             #The applied abdominal torque in g*(cm^2)/(s^2)
             
         #tau_w: The magnitude (and direction) of the applied wing torque
-        if treatment == 'fa':
-            #If our model is fully actuated, we want the array below
-            tau_w_array = (100000*(2*(np.random.rand(numOfTrajectories)-0.5))*(LengthScaleFactor**4))
-                        #The applied abdominal torque in g*(cm^2)/(s^2)
-        else:
-            #If our model is under-actuated, we want an array of zeros
-            tau_w_array = np.zeros(numOfTrajectories) 
-                        #The applied abdominal torque in g*(cm^2)/(s^2)
+        tau_w_array = (100000*(2*(np.random.rand(numOfTrajectories)-0.5))*(LengthScaleFactor**4))
+#         tau_w = np.zeros(numOfTrajectories); #If model 12h, use tau_w = 0
+            #The applied abdominal torque in g*(cm^2)/(s^2)
         
         #Define the goal criteria for y and ydot BEFORE the parallelized loop
         y_g_thisPartPath = y_g[int(goal_index[i])]; #in cm
@@ -368,28 +358,30 @@ for nn in np.arange(1,FullRuns+1):
 #        cost = [None]*int(numOfTrajectories); #This will be a single value
 #        NewICs = [None]*int(numOfTrajectories); #This will be an 8 x 1 vector
 #        check = [None]*int(numOfTrajectories); #This will be a 4 x 1 vector
-        PartPath = [None]*int(numOfTrajectories) #This will be a 4 x 1 list
+        bb = [None]*int(numOfTrajectories) #This will be a 4 x 1 list
         
         #Using multi-processing to generate simulations in a parallelized form
-        importlib.reload(multibodyDynamics_12h)
+        importlib.reload(multibodyDynamics_12h_v2)
         p = multiprocessing.Pool(MaxWorkers)
         stt = time.time()   
-        PartPath = p.map(functools.partial(multibodyDynamics_12h.generateSimulations, 
+        bb = p.map(functools.partial(multibodyDynamics_12h_v2.generateSimulations, 
                                      t_spray = t_spray, 
                                      q0 = q0, 
                                      F_array = F_array, 
                                      alpha_array = alpha_array, 
                                      tau0_array = tau0_array, 
                                      tau_w_array = tau_w_array, 
-                                     timestep = timestep,
-                                     RecedeFrac = RecedeFrac,
-                                     costCoeff = costCoeff,
-                                     goalCriteria = goalCriteria,
                                      globalList = globalList),
                                      range(numOfTrajectories))
             #Note bb is going to be a 2500 x 1 nested list
         parLoop_time = time.time()-stt
         print(numOfTrajectories," trajectories took ",parLoop_time, " seconds, ")
+        
+        calcCost = p.map(functools.partial(multibodyDynamics_12h_v2.calcCostFunctionValue, 
+                                     bb = bb,
+                                     costCoeff = costCoeff,
+                                     goalCriteria = goalCriteria),range(numOfTrajectories))
+        calcCost = np.array(calcCost)
         
         #To close the multi-threading, and join the threads
         p.close()
@@ -404,19 +396,30 @@ for nn in np.arange(1,FullRuns+1):
         #Multi-processing ends here.
         
         #Extracting the lowest cost function value location
-        extractedCost = [None]*int(numOfTrajectories)
+#        extractedCost = [None]*int(numOfTrajectories)
         
-        for j in np.arange(0,numOfTrajectories):
-            extractedCost[j] = PartPath[j][1]
+#        for j in np.arange(0,numOfTrajectories):
+#            extractedCost[j] = bb[j][1]
         
         #Overall counter (might use this instead of i_overall)
         
         kk = kk+numOfTrajectories #DO NOT RESET
         
         #Find the indices of the lowest cost function value
-        lowestCostIndex = np.where(np.array(extractedCost) == min(extractedCost)) 
+        lowestCostIndex = np.where(calcCost == min(calcCost)) 
         lowestCostInt = int(lowestCostIndex[0]) #Integer value of the index
 #        print("Lowest cost index is: ", lowestCostInt)
+        
+        #Identify the new ICs
+        NewIC_index = int(timestep*RecedeFrac)
+        NewICs = np.array([bb[lowestCostInt][NewIC_index,0], 
+                           bb[lowestCostInt][NewIC_index,1], 
+                           bb[lowestCostInt][NewIC_index,2], 
+                           bb[lowestCostInt][NewIC_index,3], 
+                           bb[lowestCostInt][NewIC_index,4], 
+                           bb[lowestCostInt][NewIC_index,5], 
+                           bb[lowestCostInt][NewIC_index,6], 
+                           bb[lowestCostInt][NewIC_index,7]])
 
         winningList = [None]*int(10)
         
@@ -425,11 +428,11 @@ for nn in np.arange(1,FullRuns+1):
         winningList[2] = alpha_array[lowestCostInt] #alpha for this spray
         winningList[3] = tau0_array[lowestCostInt] #abdominal torque for this spray
         winningList[4] = tau_w_array[lowestCostInt] #wing torque for this spray
-        winningList[5] = PartPath[lowestCostInt][0] #StateVars for this spray
-        winningList[6] = PartPath[lowestCostInt][1] #cost function value for this spray
-        winningList[7] = PartPath[lowestCostInt][2] #NEW initial conditions for this spray
-        winningList[8] = PartPath[lowestCostInt][3] #A 4 x 1 array of:
-                                #[F, alpha, tau0, and tau_w] for this spray
+        winningList[5] = np.array(bb[lowestCostInt]) #StateVars for this spray
+        winningList[6] = calcCost[lowestCostInt] #cost function value for this spray
+        winningList[7] = NewICs #NEW initial conditions for this spray
+#        winningList[8] = bb[lowestCostInt][3] #A 4 x 1 array of:
+#                                #[F, alpha, tau0, and tau_w] for this spray
         winningList[9] = parLoop_time #The run time for *this set of* 2500 sprays
 
 #        print("The following MUST match... ")
@@ -454,10 +457,10 @@ for nn in np.arange(1,FullRuns+1):
     prefix = 'pre_Winstore_{}_'.format(nn+shift)
         #Reminder: nn is number of FullRuns, shift is shifting this value
     filename = prefix + suffix
-    print("Filename is: ", filename)
+    print(filename)
     
     #Save the pre_Winstore file
-#    savemat(filename, {'pre_Winstore': pre_Winstore}) #UNMUTE WHEN YOU WANT TO SAVE THE DATA
+#    savemat(filename, {'pre_Winstore': pre_Winstore})
     
     #Now we reset our initial conditions (q0) and temporary storage (xx)
     #for the next full run.
@@ -470,12 +473,10 @@ for nn in np.arange(1,FullRuns+1):
 #    xx = xx_og;
 
 tstamp_endLoop = datetime.now()
-runtime_diff = tstamp_endLoop - tstamp_beginLoop
-print("Run time of loop is: ", runtime_diff)
 
 # %% Plot the trajectories
     
-for hah in np.arange(0,numOfTrajectories):
+for hah in np.arange(0,7):
     x_prac = np.array(pre_Winstore[hah][5][:,0])
     y_prac = np.array(pre_Winstore[hah][5][:,1])
     plt.plot(x_prac,y_prac)
@@ -484,11 +485,11 @@ plt.ylabel("y (cm)")
 # % Plot the time elapsed for each set of sprays
 time_prac = [None]*int(numOfTrajectories)
 
-# %% Plot the time to generate simulations
-for hah in np.arange(0,numOfTrajectories):
+# %%
+for hah in np.arange(0,7):
     time_prac[hah] = pre_Winstore[hah][9]
 plt.plot(time_prac)
 plt.xlabel("Partial Path Number")
 plt.ylabel("Elapsed run time (seconds)")
-plot_title = str(numOfTrajectories)+ " trajectories on "+ str(MaxWorkers)+ " cores. Treatment: " + treatment
+plot_title = str(numOfTrajectories)+ " trajectories on "+ str(MaxWorkers)+ " cores"
 plt.title(plot_title)
