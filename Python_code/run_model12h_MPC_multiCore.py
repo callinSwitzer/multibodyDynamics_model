@@ -364,10 +364,6 @@ for nn in np.arange(1,FullRuns+1):
         goalCriteria = np.array([x_g, y_g_thisPartPath, theta_g, xdot_g, 
                                  ydot_g_thisPartPath, thetadot_g])
         
-#        bigQ = [None]*int(numOfTrajectories); #This will be a 100 x 8 matrix
-#        cost = [None]*int(numOfTrajectories); #This will be a single value
-#        NewICs = [None]*int(numOfTrajectories); #This will be an 8 x 1 vector
-#        check = [None]*int(numOfTrajectories); #This will be a 4 x 1 vector
         PartPath = [None]*int(numOfTrajectories) #This will be a 4 x 1 list
         
         #Using multi-processing to generate simulations in a parallelized form
@@ -387,7 +383,7 @@ for nn in np.arange(1,FullRuns+1):
                                      goalCriteria = goalCriteria,
                                      globalList = globalList),
                                      range(numOfTrajectories))
-            #Note bb is going to be a 2500 x 1 nested list
+            #Note PartPath is going to be a 2500 x 1 nested list
         parLoop_time = time.time()-stt
         print(numOfTrajectories," trajectories took ",parLoop_time, " seconds, ")
         
@@ -436,7 +432,6 @@ for nn in np.arange(1,FullRuns+1):
 #        print("F, alpha, tau0, tau_w are: ", winningList[1], winningList[2], winningList[3], winningList[4])
 #        print("Check outputs the following: ", winningList[8])
 
-#         PartPath = winningList;
         pre_Winstore[i] = winningList
     
         #Set the new initial conditions for the next spray
@@ -445,9 +440,7 @@ for nn in np.arange(1,FullRuns+1):
         #Print out the progress of the simulations
         print('On Full Run #',nn,', partial path: ', i, ' of ', 
               numOfPartialPaths)
-        
-#        p.close()
-#        p.join()
+
         #End of Partial paths loop (i)
     
     #Create the filename for the saved data
@@ -475,18 +468,18 @@ print("Run time of loop is: ", runtime_diff)
 
 # %% Plot the trajectories
     
-for hah in np.arange(0,numOfTrajectories):
-    x_prac = np.array(pre_Winstore[hah][5][:,0])
-    y_prac = np.array(pre_Winstore[hah][5][:,1])
+for w in np.arange(0,numOfTrajectories):
+    x_prac = np.array(pre_Winstore[w][5][:,0])
+    y_prac = np.array(pre_Winstore[w][5][:,1])
     plt.plot(x_prac,y_prac)
 plt.xlabel("x (cm)")
 plt.ylabel("y (cm)")
-# % Plot the time elapsed for each set of sprays
+
+# %% Plot the time elapsed to generate each set of sprays
 time_prac = [None]*int(numOfTrajectories)
 
-# %% Plot the time to generate simulations
-for hah in np.arange(0,numOfTrajectories):
-    time_prac[hah] = pre_Winstore[hah][9]
+for mm in np.arange(0,numOfTrajectories):
+    time_prac[mm] = pre_Winstore[mm][9]
 plt.plot(time_prac)
 plt.xlabel("Partial Path Number")
 plt.ylabel("Elapsed run time (seconds)")
