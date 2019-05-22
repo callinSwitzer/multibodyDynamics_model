@@ -54,10 +54,7 @@
 #     12c is for vertical aggressive maneuver
 #     12h is for sum of prime number sines
 
-
-#____________________________________________________
-
-# The python preamble
+# %% The python preamble
 ## We the People, in Order to form a perfect Union,...
 #import matplotlib.pyplot as plt
 import numpy as np
@@ -93,7 +90,7 @@ from matplotlib import pyplot as plt #UNMUTE THIS WHEN TROUBLESHOOTING
 # import matplotlib.pylab as pylab
     #forces plots to appear in the ipython notebook
 
-# ## Variables to alter (if someone else is making changes for me)
+# %% Variables to alter (if someone else is making changes for me)
 #Note: all numerical values MUST be integers
 
 numOfTrajectories = int(2500) #Number of trajectories per half wing stroke spray
@@ -102,7 +99,7 @@ FullRuns = int(1) #Number of full runs (MUST be >= 1)
 treatment = 'fa' #Fully-actuated (fa), Under-actuated (ua), 
                   #Under-actuated AND shifted (us)
 
-# ## Variable setup 
+# %% Variable setup 
 #(note, all are scalar values)
 
 LengthScaleFactor = 1 #This will multiply all linear scales of the model
@@ -144,8 +141,7 @@ rhoA = 1.18*10**(-3) #The density of the air in g/(cm^3)
 muA = 1.86*10**(-4) #The dynamic viscosity of air at 27C in in g/(cm*s)
 g = 980.0 #g is the acceleration due to gravity in cm/(s^2)
 
-
-#  Filename suffix loop
+# %% Filename suffix loop
 point = 'p'
 LSFtext = '_LSF_'
 LEtext = '_LE_'
@@ -179,7 +175,7 @@ else:
 
 print(suffix)
 
-#  More variables NOT to alter
+# %% More variables NOT to alter
 halfwingStrokes = int(501) #Originally 500, but we need an extra half wing
     #stroke for the formal MPC.
 hwbf = int(50) #wing beat frequency of the insect in Hz
@@ -206,11 +202,11 @@ t_spray = np.linspace(ti, tf, timestep, endpoint = True);
 
 print('Number of max workers is: ', MaxWorkers)
 
-# ## Time vector
+# %% Time vector
 Tstore = np.linspace(0,((1/hwbf)*halfwingStrokes),(timestep*halfwingStrokes)).T
 #savemat('Tstore_MPC_hws_sp.mat', {'Tstore': Tstore}) #UNMUTE WHEN YOU WANT TO SAVE THE DATA
 
-# ## Relevant to cost function
+# %% Relevant to cost function
 #Goal criteria
 x_g = 0 #in cm
 theta_g = np.pi/4 #in radians
@@ -263,7 +259,7 @@ c1 = 10**9; c2 = 10**10; c3 = 10**10; c4 = 10**-5; c5 = 10**-5; c6 = 10**8;
 #Pack costCoefficients
 costCoeff = np.array([c1, c2, c3, c4, c5, c6])
 
-# ## Initial conditions
+# %% Initial conditions
             #q0 = [x, y, theta, phi, xdot, ydot, thetadot, phidot]
 q0_og = np.array([0.0, 0.0, theta_g, (theta_g + np.pi), 10**-4, 10**-4, 0.0, 0.0])
 q0 = q0_og #The initial conditions will be reset with each half wing stroke, 
@@ -273,7 +269,7 @@ betaR = q0_og[3] - q0_og[2] - np.pi #This is the resting configuration of our
     #torsional spring(s) = Initial abdomen angle - initial head angle - pi
 tsExp = int(1) #This is the torsional spring exponent. MUST be an odd number.
     
-# ## Calculated inertial properies of the simulated insect
+# %% Calculated inertial properies of the simulated insect
 m1 = rho*(4/3)*np.pi*(bhead**2)*ahead #m1 is the mass of the head-thorax
 m2 = rho*(4/3)*np.pi*(bbutt**2)*abutt #m2 is the mass of the abdomen 
                 #(petiole + gaster)
@@ -293,7 +289,7 @@ S_head = np.pi*(bhead**2) #This is the surface area of the object
 S_butt = np.pi*(bbutt**2) #This is the surface area of the object 
                 #experiencing drag. In this case, it is modeled as a sphere.
                 
-# ## Define global variables
+# %% Define global variables
 globalDict = OrderedDict({"L1": L1, "L2": L2, "L3": L3, "L_petiole": L_petiole, 
               "ahead": ahead, "abutt": abutt, "bhead": bhead, "bbutt": bbutt,
               "K": K, "c": c, "rho": rho, "rhoA": rhoA, "muA": muA, "g": g,
@@ -304,7 +300,7 @@ globalDict = OrderedDict({"L1": L1, "L2": L2, "L3": L3, "L_petiole": L_petiole,
 # Convert the dictionary to a list. Apparently @jit needs arrays or lists
 globalList = [v_uni for v_uni in globalDict.values()]
 
-# ## Prescribe the storage data
+# %% Prescribe the storage data
 #xx_og = np.zeros((timestep,len(q0_og))); #This will be the vector containing 
 #                                        #the state variables in the 
 #                                        #parellelized loop.
@@ -319,7 +315,7 @@ numOfPartialPaths = int((halfwingStrokes-1)*(1/RecedeFrac)) #An integer value
                                             #of the number of partial paths
 pre_Winstore = ([None]*numOfPartialPaths)
 
-# ## Generating the simulations
+# %% Generating the simulations
 
 tstamp_beginLoop = datetime.now()
 print("Begin generating simulations loop")
@@ -477,7 +473,7 @@ tstamp_endLoop = datetime.now()
 runtime_diff = tstamp_endLoop - tstamp_beginLoop
 print("Run time of loop is: ", runtime_diff)
 
-# ## Plot the trajectories
+# %% Plot the trajectories
     
 for hah in np.arange(0,numOfTrajectories):
     x_prac = np.array(pre_Winstore[hah][5][:,0])
@@ -488,7 +484,7 @@ plt.ylabel("y (cm)")
 # % Plot the time elapsed for each set of sprays
 time_prac = [None]*int(numOfTrajectories)
 
-# ## Plot the time to generate simulations
+# %% Plot the time to generate simulations
 for hah in np.arange(0,numOfTrajectories):
     time_prac[hah] = pre_Winstore[hah][9]
 plt.plot(time_prac)
