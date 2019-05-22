@@ -7,10 +7,9 @@ from numba import jit
 def myODE_5(Q, t_spray, F, alpha, tau0, tau_w, L1, L2, L3, L_petiole, ahead, 
             abutt, bhead, bbutt, K, c, rho, rhoA, muA, g, m1, m2, echead, 
             ecbutt, I1, I2, S_head, S_butt, betaR, tsExp):
-            #def myODE_5(Q,t, par, F, alpha, tau0, tau_w):
-            #Unpack the state vector (THE ORDER MATTERS)
+    #Unpack the state vector (THE ORDER MATTERS)
     x, y, theta, phi, xd, yd, thetad, phid = Q 
-                
+    
     #Reynolds number calculation:
     Re_head = rhoA*(np.sqrt((xd**2)+(yd**2)))*(2*bhead)/muA #dimensionless number
     Re_butt = rhoA*(np.sqrt((xd**2)+(yd**2)))*(2*bbutt)/muA #dimensionless number
