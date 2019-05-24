@@ -99,7 +99,7 @@ numOfTrajectories = int(2500) #Number of trajectories per half wing stroke spray
 shift = int(0) #This is to increase the file number as appropriate
 FullRuns = int(1) #Number of full runs (MUST be >= 1)
 treatment = 'fa' #Fully-actuated (fa), Under-actuated (ua), 
-                  #Under-actuated AND shifted (us)
+                  #Under-actuated AND shifted (us), Fully-actuated AND shifted (fs)
 
 # %% Variable setup 
 #(note, all are scalar values)
@@ -111,7 +111,7 @@ LengthExtend = 0 #This will lengthen the difference between the two masses.
 L1 = LengthScaleFactor*0.908 #Length from the thorax-abdomen joint to 
     #the center of the head-thorax mass in cm.
     
-if treatment == 'us':
+if treatment[1] == 's':
     #If we do not want the L3 off the m1 center of mass:
     L3 = LengthScaleFactor*0.75 #Length from the thorax-abdomen joint to the 
                 #aerodynamic force vector in cm    
@@ -347,7 +347,7 @@ for nn in np.arange(1,FullRuns+1):
             #The applied abdominal torque in g*(cm^2)/(s^2)
             
         #tau_w: The magnitude (and direction) of the applied wing torque
-        if treatment == 'fa':
+        if treatment[0] == 'f':
             #If our model is fully actuated, we want the array below
             tau_w_array = (100000*(2*(np.random.rand(numOfTrajectories)-0.5))*(LengthScaleFactor**4))
                         #The applied abdominal torque in g*(cm^2)/(s^2)
@@ -482,3 +482,5 @@ plt.xlabel("Partial Path Number")
 plt.ylabel("Elapsed run time (seconds)")
 plot_title = str(numOfTrajectories)+ " trajectories on "+ str(MaxWorkers)+ " cores. Treatment: " + treatment
 plt.title(plot_title)
+
+print("The average time per set of sprays:", np.mean(time_prac), "seconds")
