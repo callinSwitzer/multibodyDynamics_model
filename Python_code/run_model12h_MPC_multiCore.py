@@ -464,7 +464,8 @@ print("Time at the end of the loop: ", tstamp_endLoop)
 print("Total run time is: ", runtime_diff)
 
 # %% Plot the trajectories
-    
+
+plt.figure(1)
 for w in np.arange(0,len(Winstore)):
     x_prac = np.array(Winstore[w]['bigQ'][:,0])
     y_prac = np.array(Winstore[w]['bigQ'][:,1])
@@ -475,6 +476,7 @@ plt.ylabel("y (cm)")
 # %% Plot the time elapsed to generate each set of sprays
 time_prac = [None]*int(len(Winstore))
 
+plt.figure(2)
 for mm in np.arange(0,len(Winstore)):
     time_prac[mm] = Winstore[mm]['runTime']
 plt.plot(time_prac)
