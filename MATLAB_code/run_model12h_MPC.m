@@ -115,24 +115,24 @@ if LengthScaleFactor >= 1
     if LengthExtend < 1 && LengthExtend > 0
         LSF_val = num2str(LengthScaleFactor);
         LE_val = num2str(10*LengthExtend);
-        suffix = [treatment, LSFtext, LSF_val, LEtext, point, LE_val,...
+        suffix = ['_',treatment, LSFtext, LSF_val, LEtext, point, LE_val,...
             dotMATSuffix];
     else
         LSF_val = num2str(LengthScaleFactor);
         LE_val = num2str(LengthExtend);
-        suffix = [treatment, LSFtext, LSF_val, LEtext, LE_val,...
+        suffix = ['_',treatment, LSFtext, LSF_val, LEtext, LE_val,...
             dotMATSuffix];
     end
 else
     if LengthExtend < 1 && LengthExtend > 0
         LSF_val = num2str(10*LengthScaleFactor);
         LE_val = num2str(10*LengthExtend);
-        suffix = [treatment, LSFtext, point, LSF_val, LEtext, point,...
+        suffix = ['_',treatment, LSFtext, point, LSF_val, LEtext, point,...
             LE_val, dotMATSuffix];
     else
         LSF_val = num2str(10*LengthScaleFactor);
         LE_val = num2str(LengthExtend);
-        suffix = [treatment, LSFtext, point, LSF_val, LEtext, LE_val,...
+        suffix = ['_',treatment, LSFtext, point, LSF_val, LEtext, LE_val,...
             dotMATSuffix];
     end
 end
@@ -328,7 +328,7 @@ y_g_thisPartPath = y_g(goal_index(i),1);
     
     parfor(j = 1:numOfTrajectories, MaxWorkers)   
        %[TOUT,YOUT,TE,YE,IE] = ode45(ODEFUN,TSPAN,Y0,OPTIONS)
-        [T, Q] = ode45(@(t,Q) myODE_5(t, Q, par,...
+        [T, Q] = ode15s(@(t,Q) myODE_5(t, Q, par,...
             PartPath(j).F, PartPath(j).alpha, PartPath(j).tau0, ...
             PartPath(j).tau_w), [0, 1/hwbf], PartPath(j).ICs, OPTIONS);
         
@@ -475,11 +475,10 @@ end
 %% Final display on window
 disp(' ');
 disp('Estimated end time of simulations were as follows... ')
-disp(['First estimate (One partial path):         ', datestr(timeEst(1))]);
-disp(['Second estimate (First 100 partial paths): ', datestr(timeEst(2))]);
-disp(['Third estimate (1/10th of the way done):   ', datestr(timeEst(3))]);
-disp(['Fourth estimate (Halfway done):            ', datestr(timeEst(4))]);
-disp(['Fifth estimate (3/4 of the way done):      ', datestr(timeEst(5))]);
+disp(['Second estimate (First 100 partial paths): ', datestr(timeEst(1))]);
+disp(['Third estimate (1/10th of the way done):   ', datestr(timeEst(2))]);
+disp(['Fourth estimate (Halfway done):            ', datestr(timeEst(3))]);
+disp(['Fifth estimate (3/4 of the way done):      ', datestr(timeEst(4))]);
 disp(' ');
 disp('Completely done, son.');
 disp(['Time at end: ',datestr(datetime)])
