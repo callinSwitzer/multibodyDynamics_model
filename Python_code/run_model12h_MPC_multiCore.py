@@ -49,6 +49,8 @@
 #     5/1/19- Went back to global variables (I know, it's not the best 
 #         practice, but I have no patience at this time).
 #     5/17/19- Got the sucker to run with huge help from Callin Switzer. Woo!
+#     5/22/19- Made significant changes. The model now outputs a dictionary, 
+#         which is useful, and directly applicable to my MATLAB code.
 # 
 #     12b is for horizontal aggressive maneuver
 #     12c is for vertical aggressive maneuver
@@ -100,7 +102,7 @@ numOfTrajectories = int(2500) #Number of trajectories per half wing stroke spray
 shift = int(0) #This is to increase the file number as appropriate
 FullRuns = int(1) #Number of full runs (MUST be >= 1)
 treatment = 'fa' #Fully-actuated (fa), Under-actuated (ua), 
-                  #Under-actuated AND shifted (us)
+                  #Under-actuated AND shifted (us), Fully-actuated AND shifted (fs)
 
 # ## Variable setup 
 #(note, all are scalar values)
@@ -112,7 +114,7 @@ LengthExtend = 0 #This will lengthen the difference between the two masses.
 L1 = LengthScaleFactor*0.908 #Length from the thorax-abdomen joint to 
     #the center of the head-thorax mass in cm.
     
-if treatment == 'us':
+if treatment[1] == 's':
     #If we do not want the L3 off the m1 center of mass:
     L3 = LengthScaleFactor*0.75 #Length from the thorax-abdomen joint to the 
                 #aerodynamic force vector in cm    
@@ -208,7 +210,7 @@ print('Number of max workers is: ', MaxWorkers)
 
 # ## Time vector
 Tstore = np.linspace(0,((1/hwbf)*halfwingStrokes),(timestep*halfwingStrokes)).T
-#savemat('Tstore_MPC_hws_sp.mat', {'Tstore': Tstore}) #UNMUTE WHEN YOU WANT TO SAVE THE DATA
+savemat('Tstore_MPC_hws_sp.mat', {'Tstore': Tstore}) #UNMUTE WHEN YOU WANT TO SAVE THE DATA
 
 # ## Relevant to cost function
 #Goal criteria
@@ -293,8 +295,10 @@ S_head = np.pi*(bhead**2) #This is the surface area of the object
 S_butt = np.pi*(bbutt**2) #This is the surface area of the object 
                 #experiencing drag. In this case, it is modeled as a sphere.
                 
+
 # ## Define global variables
 globalDict = OrderedDict({"L1": L1, "L2": L2, "L3": L3, "L_petiole": L_petiole, 
+
               "ahead": ahead, "abutt": abutt, "bhead": bhead, "bbutt": bbutt,
               "K": K, "c": c, "rho": rho, "rhoA": rhoA, "muA": muA, "g": g,
               "m1": m1, "m2": m2, "echead": echead, "ecbutt": ecbutt, "I1": I1,
@@ -302,7 +306,7 @@ globalDict = OrderedDict({"L1": L1, "L2": L2, "L3": L3, "L_petiole": L_petiole,
               "tsExp": tsExp})
 
 # Convert the dictionary to a list. Apparently @jit needs arrays or lists
-globalList = [v_uni for v_uni in globalDict.values()]
+globalList = [v_uni for v_uni in parDict.values()]
 
 # ## Prescribe the storage data
 #xx_og = np.zeros((timestep,len(q0_og))); #This will be the vector containing 
@@ -310,14 +314,12 @@ globalList = [v_uni for v_uni in globalDict.values()]
 #                                        #parellelized loop.
 #xx = xx_og; #The vector containing the state variables will be reset with each 
 #            #half wing stroke, but for now, we'll set this to the og.
-# tt = np.linspace(0,(1/hwbf),timestep); #This will be the time vector in the 
-                                #parallelized loop for interpolation reasons.
 #PartPath = ([None]*int(numOfTrajectories)); #This creates the number of 
                                        #partial paths necessary for the 
                                        #receding horizon
 numOfPartialPaths = int((halfwingStrokes-1)*(1/RecedeFrac)) #An integer value 
                                             #of the number of partial paths
-pre_Winstore = ([None]*numOfPartialPaths)
+Winstore = ([None]*numOfPartialPaths)
 
 # ## Generating the simulations
 
@@ -351,7 +353,7 @@ for nn in np.arange(1,FullRuns+1):
             #The applied abdominal torque in g*(cm^2)/(s^2)
             
         #tau_w: The magnitude (and direction) of the applied wing torque
-        if treatment == 'fa':
+        if treatment[0] == 'f':
             #If our model is fully actuated, we want the array below
             tau_w_array = (100000*(2*(np.random.rand(numOfTrajectories)-0.5))*(LengthScaleFactor**4))
                         #The applied abdominal torque in g*(cm^2)/(s^2)
@@ -417,29 +419,25 @@ for nn in np.arange(1,FullRuns+1):
         lowestCostIndex = np.where(np.array(extractedCost) == min(extractedCost)) 
         lowestCostInt = int(lowestCostIndex[0]) #Integer value of the index
 #        print("Lowest cost index is: ", lowestCostInt)
-
-        winningList = [None]*int(10)
         
-        winningList[0] = q0 #The initial conditions for this spray
-        winningList[1] = F_array[lowestCostInt] #F for this spray
-        winningList[2] = alpha_array[lowestCostInt] #alpha for this spray
-        winningList[3] = tau0_array[lowestCostInt] #abdominal torque for this spray
-        winningList[4] = tau_w_array[lowestCostInt] #wing torque for this spray
-        winningList[5] = PartPath[lowestCostInt][0] #StateVars for this spray
-        winningList[6] = PartPath[lowestCostInt][1] #cost function value for this spray
-        winningList[7] = PartPath[lowestCostInt][2] #NEW initial conditions for this spray
-        winningList[8] = PartPath[lowestCostInt][3] #A 4 x 1 array of:
-                                #[F, alpha, tau0, and tau_w] for this spray
-        winningList[9] = parLoop_time #The run time for *this set of* 2500 sprays
+        winningDict = OrderedDict({"ICs": q0, "F": F_array[lowestCostInt], 
+                                   "alpha": alpha_array[lowestCostInt],
+                                   "tau0": tau0_array[lowestCostInt], 
+                                   "tau_w": tau_w_array[lowestCostInt], 
+                                   "bigQ": PartPath[lowestCostInt][0], 
+                                   "cost": PartPath[lowestCostInt][1], 
+                                   "NewICs": PartPath[lowestCostInt][2],
+                                   "check": PartPath[lowestCostInt][3], 
+                                   "runTime": parLoop_time, "par": parDict})
 
 #        print("The following MUST match... ")
 #        print("F, alpha, tau0, tau_w are: ", winningList[1], winningList[2], winningList[3], winningList[4])
 #        print("Check outputs the following: ", winningList[8])
 
-        pre_Winstore[i] = winningList
+        Winstore[i] = winningDict
     
         #Set the new initial conditions for the next spray
-        q0 = winningList[7]
+        q0 = PartPath[lowestCostInt][2]
         
         #Print out the progress of the simulations
         print('On Full Run #',nn,', partial path: ', i, ' of ', 
@@ -448,13 +446,13 @@ for nn in np.arange(1,FullRuns+1):
         #End of Partial paths loop (i)
     
     #Create the filename for the saved data
-    prefix = 'pre_Winstore_{}_'.format(nn+shift)
+    prefix = 'Winstore_{}_'.format(nn+shift)
         #Reminder: nn is number of FullRuns, shift is shifting this value
     filename = prefix + suffix
     print("Filename is: ", filename)
     
-    #Save the pre_Winstore file
-#    savemat(filename, {'pre_Winstore': pre_Winstore}) #UNMUTE WHEN YOU WANT TO SAVE THE DATA
+    #Save the Winstore file
+    savemat(filename, {'Winstore': Winstore}) #UNMUTE WHEN YOU WANT TO SAVE THE DATA
     
     #Now we reset our initial conditions (q0) and temporary storage (xx)
     #for the next full run.
@@ -468,24 +466,30 @@ for nn in np.arange(1,FullRuns+1):
 
 tstamp_endLoop = datetime.now()
 runtime_diff = tstamp_endLoop - tstamp_beginLoop
-print("Run time of loop is: ", runtime_diff)
+print("Time at the end of the loop: ", tstamp_endLoop)
+print("Total run time is: ", runtime_diff)
+
 
 # ## Plot the trajectories
     
 for w in np.arange(0,numOfTrajectories):
     x_prac = np.array(pre_Winstore[w][5][:,0])
     y_prac = np.array(pre_Winstore[w][5][:,1])
+
     plt.plot(x_prac,y_prac)
 plt.xlabel("x (cm)")
 plt.ylabel("y (cm)")
 
 # %% Plot the time elapsed to generate each set of sprays
-time_prac = [None]*int(numOfTrajectories)
+time_prac = [None]*int(len(Winstore))
 
-for mm in np.arange(0,numOfTrajectories):
-    time_prac[mm] = pre_Winstore[mm][9]
+plt.figure(2)
+for mm in np.arange(0,len(Winstore)):
+    time_prac[mm] = Winstore[mm]['runTime']
 plt.plot(time_prac)
 plt.xlabel("Partial Path Number")
 plt.ylabel("Elapsed run time (seconds)")
 plot_title = str(numOfTrajectories)+ " trajectories on "+ str(MaxWorkers)+ " cores. Treatment: " + treatment
 plt.title(plot_title)
+
+print("The average time per set of sprays:", np.mean(time_prac), "seconds")
